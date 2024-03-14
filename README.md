@@ -3,6 +3,7 @@ Scripts for generating synthetic LLM training data:
 
 - sharegpt-to-dpo:
   - Takes an input dataset in ShareGPT format (supports `json`, `jsonl`, or `parquet`) and uses the first turn of the conversation to generate a DPO dataset consisting of 'chosen' examples (the original data) and 'rejected' examples (the newly generated data from your LLM API endpoint)
+  - Designed for [TabbyAPI](https://github.com/theroyallab/tabbyAPI), however should function with any OAI-compatible completion endpoint
   - `-t`: specifies a Jinja2 template to use for formatting the prompt (ignored if using chat completions), otherwise uses the Mistral instruction template by default
   - `-c`: reverses the 'chosen' and 'rejected' samples
 
