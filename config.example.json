@@ -1,0 +1,16 @@
+{
+    "api_url": "http://127.0.0.1",
+    "port": 5000,
+    "api_key": "",
+    "chat_completion": false,
+    "eos_token": "</s>",
+    "gen_params": {
+        "max_tokens": 1024,
+        "temperature": 1.0,
+        "temperature_last": true,
+        "top_k": 0,
+        "min_p": 0.1,
+        "add_bos_token": true,
+        "ban_eos_token": false
+    }
+}
