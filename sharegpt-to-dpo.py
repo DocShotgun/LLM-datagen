@@ -1,6 +1,7 @@
 import argparse
 import json
 import pathlib
+import time
 from functools import lru_cache
 
 import httpx
@@ -9,29 +10,62 @@ from datasets import Dataset, load_dataset
 
 def infer_completion(prompt, genparams: dict):
     """Generate response from API using completions endpoint"""
-    r = httpx.post(
-        f"{API_URL}:{PORT}/v1/completions",
-        headers={"x-api-key": API_KEY},
-        json={"prompt": prompt, "stream": False, **genparams},
-        timeout=None,
-    )
-    return r.json().get("choices")[0].get("text")
+    while True:
+        r = httpx.stream(
+            "POST",
+            f"{API_URL}/v1/completions",
+            headers={"authorization": API_KEY, "x-api-key": API_KEY},
+            json={"prompt": prompt, "stream": True, "model": MODEL, **genparams},
+            timeout=None,
+        )
+        with r as r:
+            if r.status_code == 200:
+                generated_text = ""
+                for chunk in r.iter_lines():
+                    if chunk.startswith("data: "):
+                        chunk = chunk.replace("data: ", "")
+                        if chunk == "[DONE]":
+                            break
+                        chunk_data = json.loads(chunk)
+                        if "choices" in chunk_data:
+                            word = chunk_data["choices"][0]["text"]
+                            generated_text += word
+                return generated_text
+            else:
+                time.sleep(5)
 
 
 def infer_chat_completion(messages, genparams: dict):
     """Generate response from API using chat completions endpoint"""
-    r = httpx.post(
-        f"{API_URL}:{PORT}/v1/chat/completions",
-        headers={"x-api-key": API_KEY},
-        json={
-            "messages": messages,
-            "stream": False,
-            "add_generation_prompt": True,
-            **genparams,
-        },
-        timeout=None,
-    )
-    return r.json().get("choices")[0].get("text")
+    while True:
+        r = httpx.stream(
+            "POST",
+            f"{API_URL}/v1/chat/completions",
+            headers={"authorization": API_KEY, "x-api-key": API_KEY},
+            json={
+                "messages": messages,
+                "stream": True,
+                "model": MODEL,
+                "add_generation_prompt": True,
+                **genparams,
+            },
+            timeout=None,
+        )
+        with r as r:
+            if r.status_code == 200:
+                generated_text = ""
+                for chunk in r.iter_lines():
+                    if chunk.startswith("data: "):
+                        chunk = chunk.replace("data: ", "")
+                        chunk_data = json.loads(chunk)
+                        if "choices" in chunk_data:
+                            if chunk_data["choices"][0]["finish_reason"]:
+                                break
+                            word = chunk_data["choices"][0]["delta"]["content"]
+                            generated_text += word
+                return generated_text
+            else:
+                time.sleep(5)
 
 
 def format_prompt_jinja(
@@ -135,9 +169,9 @@ script_dir = pathlib.Path(__file__).parent.resolve()
 conf_path = script_dir / "config.json"
 with open(conf_path, "r") as config_file:
     config = json.load(config_file)
-API_URL = config.get("api_url", "http://127.0.0.1")
-PORT = config.get("port", 5000)
+API_URL = config.get("api_url", "http://127.0.0.1:5000")
 API_KEY = config.get("api_key", None)
+MODEL = config.get("model", "gpt-3.5-turbo")
 CHAT_COMPLETION = config.get("chat_completion", False)
 EOS_TOKEN = config.get("eos_token", "</s>")
 GEN_PARAMS = config.get("gen_params", {})

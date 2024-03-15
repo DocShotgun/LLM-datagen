@@ -1,7 +1,7 @@
 {
-    "api_url": "http://127.0.0.1",
-    "port": 5000,
+    "api_url": "http://127.0.0.1:5000",
     "api_key": "",
+    "model": "gpt-3.5-turbo",
     "chat_completion": false,
     "eos_token": "</s>",
     "gen_params": {
